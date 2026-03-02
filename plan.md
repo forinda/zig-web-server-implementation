@@ -59,6 +59,15 @@ Refactored the monolithic web server into a layered architecture:
 - `architecture.md` — full framework architecture overview
 - `plan.md` — this implementation plan
 
+### Step 8: Dev Mode (Hot Reload) ✓
+- `dev.sh` shell script at project root
+- Auto-detects inotifywait (event-driven) or falls back to polling (1s)
+- Watches `src/` for `.zig` file changes
+- On change: kills server, rebuilds, restarts
+- Colored, timestamped output
+- Signal-safe cleanup (Ctrl+C kills child server)
+- `zig build dev` build step integration
+
 ## Endpoints
 
 | Method | Path | Description |

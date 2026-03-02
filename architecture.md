@@ -145,3 +145,26 @@ Test coverage:
 - `utils/compression.zig` — gzip compress/decompress round-trip
 - `utils/headers.zig` — header lookup, case-insensitive matching
 - `context.zig` — Params get/add
+
+## Development
+
+### Hot Reload
+
+Run the development server with automatic rebuild on file changes:
+
+```bash
+./dev.sh
+```
+
+Or via the build system:
+
+```bash
+zig build dev
+```
+
+The dev script watches `src/` for `.zig` file modifications. When a change is detected, it:
+1. Kills the running server
+2. Runs `zig build`
+3. Starts the new binary
+
+If `inotify-tools` is installed (`sudo apt install inotify-tools`), file changes are detected instantly via Linux inotify events. Otherwise, the script polls every 1 second using `find -newer`.

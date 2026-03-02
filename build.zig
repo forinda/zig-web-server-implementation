@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) void {
     const enable_sqlite = b.option(bool, "sqlite", "Enable SQLite adapter (requires libsqlite3-dev)") orelse false;
 
     const exe = b.addExecutable(.{
-        .name = "zig-web-server",
+        .name = "server",
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/main.zig"),
             .target = target,
@@ -38,4 +38,10 @@ pub fn build(b: *std.Build) void {
     const run_exe_tests = b.addRunArtifact(exe_tests);
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_exe_tests.step);
+
+    // Dev mode: hot reload with file watching
+    const dev_step = b.step("dev", "Run with hot reload (watches src/ for changes)");
+    const dev_cmd = b.addSystemCommand(&.{ "bash", "dev.sh" });
+    dev_cmd.setCwd(b.path("."));
+    dev_step.dependOn(&dev_cmd.step);
 }
