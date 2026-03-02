@@ -160,6 +160,12 @@ deps/                  Bundled SQLite amalgamation
 dev.sh                 Hot reload script
 ```
 
+## Known Limitations
+
+- **Single-threaded** — The server processes one request at a time. Under concurrent load, requests queue at the TCP accept level. A slow handler (e.g., large file upload) will block all other clients until it completes.
+- **No HTTP keep-alive** — Each request uses a fresh TCP connection (`connection: close`). This was necessary because the single-threaded accept loop cannot serve other clients while waiting for the next request on a keep-alive connection. Clients like `curl` work fine, but high-throughput scenarios will pay the cost of TCP handshakes per request.
+- **No TLS** — The server speaks plain HTTP. Use a reverse proxy (e.g., nginx, Caddy) if you need HTTPS.
+
 ## Tests
 
 ```bash
