@@ -4,9 +4,6 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Optional: enable SQLite adapter (requires libsqlite3-dev)
-    const enable_sqlite = b.option(bool, "sqlite", "Enable SQLite adapter (requires libsqlite3-dev)") orelse false;
-
     const exe = b.addExecutable(.{
         .name = "server",
         .root_module = b.createModule(.{
@@ -16,10 +13,16 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    if (enable_sqlite) {
-        exe.root_module.link_libc = true;
-        exe.root_module.linkSystemLibrary("sqlite3", .{});
-    }
+    // SQLite amalgamation — compiled with Zig's C compiler
+    exe.root_module.link_libc = true;
+    exe.root_module.addCSourceFile(.{
+        .file = b.path("deps/sqlite3.c"),
+        .flags = &.{
+            "-DSQLITE_THREADSAFE=0",
+            "-DSQLITE_OMIT_LOAD_EXTENSION",
+        },
+    });
+    exe.root_module.addIncludePath(b.path("deps"));
 
     b.installArtifact(exe);
 

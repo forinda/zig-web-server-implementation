@@ -226,11 +226,10 @@ pub const Database = struct {
 
     /// Execute a SQL statement that returns no rows (CREATE, INSERT, UPDATE, DELETE).
     pub fn exec(self: *Database, sql: [*:0]const u8) SqliteError!void {
-        var err_msg: ?[*:0]u8 = null;
+        var err_msg: [*c]u8 = null;
         const rc = c.sqlite3_exec(self.db, sql, null, null, &err_msg);
-        if (err_msg) |msg| {
-            std.debug.print("SQLite error: {s}\n", .{msg});
-            c.sqlite3_free(msg);
+        if (err_msg != null) {
+            c.sqlite3_free(err_msg);
         }
         if (rc != c.SQLITE_OK) return mapError(rc);
     }

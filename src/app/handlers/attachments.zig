@@ -4,7 +4,6 @@ const Context = fw.Context;
 const StatusCode = fw.StatusCode;
 const multipart = fw.multipart;
 const Storage = @import("../storage.zig").Storage;
-const models = @import("../models.zig");
 
 /// POST /api/tasks/:id/attachments — Upload attachment (multipart/form-data)
 pub fn upload(ctx: *Context) !void {
@@ -14,7 +13,10 @@ pub fn upload(ctx: *Context) !void {
     };
 
     // Verify task exists
-    if (store.findTask(task_id) == null) {
+    const exists = store.taskExists(task_id) catch {
+        return ctx.sendError(StatusCode.internal_server_error, "Database error");
+    };
+    if (!exists) {
         return ctx.sendError(StatusCode.not_found, "Task not found");
     }
 
@@ -53,10 +55,13 @@ pub fn upload(ctx: *Context) !void {
         if (part.filename) |original_filename| {
             if (original_filename.len == 0) continue;
 
+            // Get next attachment ID for filename generation
+            const next_id = store.nextAttachmentId() catch continue;
+
             // Generate a stored filename: {attachment_id}_{original}
             var name_buf: [384]u8 = undefined;
             const stored_filename = std.fmt.bufPrint(&name_buf, "{d}_{s}", .{
-                store.next_attachment_id,
+                next_id,
                 original_filename,
             }) catch continue;
 
@@ -64,13 +69,15 @@ pub fn upload(ctx: *Context) !void {
             store.saveFile(stored_filename, part.data) catch continue;
 
             // Record attachment metadata
-            _ = store.addAttachment(
+            const att = store.addAttachment(
+                ctx.allocator,
                 task_id,
                 stored_filename,
                 original_filename,
                 part.content_type,
                 part.data.len,
             ) catch continue;
+            Storage.freeAttachment(ctx.allocator, att);
 
             uploaded_count += 1;
         }
@@ -94,20 +101,19 @@ pub fn listForTask(ctx: *Context) !void {
     };
 
     // Verify task exists
-    if (store.findTask(task_id) == null) {
+    const exists = store.taskExists(task_id) catch {
+        return ctx.sendError(StatusCode.internal_server_error, "Database error");
+    };
+    if (!exists) {
         return ctx.sendError(StatusCode.not_found, "Task not found");
     }
 
-    // Filter attachments for this task
-    var result: std.ArrayList(models.Attachment) = .empty;
-    defer result.deinit(ctx.allocator);
-    for (store.attachments.items) |att| {
-        if (att.task_id == task_id) {
-            result.append(ctx.allocator, att) catch continue;
-        }
-    }
+    const atts = store.listAttachments(ctx.allocator, task_id) catch {
+        return ctx.sendError(StatusCode.internal_server_error, "Failed to list attachments");
+    };
+    defer Storage.freeAttachments(ctx.allocator, atts);
 
-    try ctx.sendJson(result.items);
+    try ctx.sendJson(atts);
 }
 
 /// GET /api/attachments/:id/download — Download an attachment
@@ -117,9 +123,12 @@ pub fn download(ctx: *Context) !void {
         return ctx.sendError(StatusCode.bad_request, "Invalid attachment ID");
     };
 
-    const att = store.findAttachment(att_id) orelse {
+    const att = store.findAttachment(ctx.allocator, att_id) catch {
+        return ctx.sendError(StatusCode.internal_server_error, "Database error");
+    } orelse {
         return ctx.sendError(StatusCode.not_found, "Attachment not found");
     };
+    defer Storage.freeAttachment(ctx.allocator, att);
 
     // Read file from disk
     const file_data = store.readFile(att.filename) catch {
