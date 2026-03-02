@@ -78,3 +78,48 @@ pub const StatusCode = struct {
         return n >= 500 and n < 600;
     }
 };
+
+const testing = std.testing;
+
+test "StatusCode.errorBody" {
+    var buf: [64]u8 = undefined;
+    const body_str = StatusCode.not_found.errorBody(&buf);
+    try testing.expectEqualStrings("{\"error\":\"Not Found\"}", body_str);
+}
+
+test "StatusCode.errorBodyMsg" {
+    var buf: [128]u8 = undefined;
+    const body_str = StatusCode.errorBodyMsg(&buf, "Custom error message");
+    try testing.expectEqualStrings("{\"error\":\"Custom error message\"}", body_str);
+}
+
+test "StatusCode.numericCode" {
+    try testing.expectEqual(@as(u10, 200), StatusCode.ok.numericCode());
+    try testing.expectEqual(@as(u10, 201), StatusCode.created.numericCode());
+    try testing.expectEqual(@as(u10, 404), StatusCode.not_found.numericCode());
+    try testing.expectEqual(@as(u10, 500), StatusCode.internal_server_error.numericCode());
+}
+
+test "StatusCode.isSuccess" {
+    try testing.expect(StatusCode.ok.isSuccess());
+    try testing.expect(StatusCode.created.isSuccess());
+    try testing.expect(StatusCode.no_content.isSuccess());
+    try testing.expect(!StatusCode.not_found.isSuccess());
+    try testing.expect(!StatusCode.internal_server_error.isSuccess());
+}
+
+test "StatusCode.isClientError" {
+    try testing.expect(StatusCode.bad_request.isClientError());
+    try testing.expect(StatusCode.not_found.isClientError());
+    try testing.expect(StatusCode.unauthorized.isClientError());
+    try testing.expect(!StatusCode.ok.isClientError());
+    try testing.expect(!StatusCode.internal_server_error.isClientError());
+}
+
+test "StatusCode.isServerError" {
+    try testing.expect(StatusCode.internal_server_error.isServerError());
+    try testing.expect(StatusCode.bad_gateway.isServerError());
+    try testing.expect(StatusCode.service_unavailable.isServerError());
+    try testing.expect(!StatusCode.ok.isServerError());
+    try testing.expect(!StatusCode.not_found.isServerError());
+}

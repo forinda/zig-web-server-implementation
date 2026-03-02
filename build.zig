@@ -4,6 +4,9 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // Optional: enable SQLite adapter (requires libsqlite3-dev)
+    const enable_sqlite = b.option(bool, "sqlite", "Enable SQLite adapter (requires libsqlite3-dev)") orelse false;
+
     const exe = b.addExecutable(.{
         .name = "zig-web-server",
         .root_module = b.createModule(.{
@@ -12,6 +15,11 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
         }),
     });
+
+    if (enable_sqlite) {
+        exe.root_module.link_libc = true;
+        exe.root_module.linkSystemLibrary("sqlite3", .{});
+    }
 
     b.installArtifact(exe);
 

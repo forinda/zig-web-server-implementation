@@ -8,7 +8,9 @@ pub fn setup(allocator: std.mem.Allocator, io: std.Io, store: *Storage) !fw.App(
     var app = fw.App(Storage).init(allocator, io, store);
 
     // Middleware
-    try app.use(fw.middleware.logger);
+    try app.use(fw.middlewares.compression);
+    try app.use(fw.middlewares.cors);
+    try app.use(fw.middlewares.logger);
 
     // Task routes
     try app.get("/api/tasks", task_handlers.list);

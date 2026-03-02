@@ -8,7 +8,7 @@ const Params = context_mod.Params;
 const HandlerFn = context_mod.HandlerFn;
 const MiddlewareFn = context_mod.MiddlewareFn;
 const Router = @import("router.zig").Router;
-const StatusCode = @import("status.zig").StatusCode;
+const StatusCode = @import("utils/status.zig").StatusCode;
 
 /// Handle a single TCP connection — processes HTTP requests in a keep-alive loop.
 pub fn handleConnection(

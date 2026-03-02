@@ -173,3 +173,48 @@ test "extractParam" {
     try std.testing.expect(fname != null);
     try std.testing.expectEqualStrings("test.txt", fname.?);
 }
+
+test "parse full multipart body" {
+    const allocator = std.testing.allocator;
+
+    const boundary = "----TestBoundary";
+    const body =
+        "------TestBoundary\r\n" ++
+        "Content-Disposition: form-data; name=\"title\"\r\n" ++
+        "\r\n" ++
+        "My Task\r\n" ++
+        "------TestBoundary\r\n" ++
+        "Content-Disposition: form-data; name=\"file\"; filename=\"readme.txt\"\r\n" ++
+        "Content-Type: text/plain\r\n" ++
+        "\r\n" ++
+        "Hello World!\r\n" ++
+        "------TestBoundary--\r\n";
+
+    const parts = try parse(allocator, body, boundary);
+    defer allocator.free(parts);
+
+    try std.testing.expectEqual(@as(usize, 2), parts.len);
+
+    // First part: form field
+    try std.testing.expectEqualStrings("title", parts[0].name);
+    try std.testing.expect(parts[0].filename == null);
+    try std.testing.expectEqualStrings("My Task", parts[0].data);
+
+    // Second part: file upload
+    try std.testing.expectEqualStrings("file", parts[1].name);
+    try std.testing.expectEqualStrings("readme.txt", parts[1].filename.?);
+    try std.testing.expectEqualStrings("text/plain", parts[1].content_type);
+    try std.testing.expectEqualStrings("Hello World!", parts[1].data);
+}
+
+test "extractBoundary with quotes" {
+    const ct = "multipart/form-data; boundary=\"----Quoted\"";
+    const boundary = extractBoundary(ct);
+    try std.testing.expect(boundary != null);
+    try std.testing.expectEqualStrings("----Quoted", boundary.?);
+}
+
+test "extractBoundary missing" {
+    const ct = "application/json";
+    try std.testing.expect(extractBoundary(ct) == null);
+}
