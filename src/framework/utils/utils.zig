@@ -17,3 +17,6 @@ pub const gzipCompress = compression.gzipCompress;
 
 pub const headers = @import("headers.zig");
 pub const findHeaderValue = headers.findHeaderValue;
+
+pub const env = @import("env.zig");
+pub const Env = env.Env;

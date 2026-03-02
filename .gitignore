@@ -3,3 +3,4 @@ zig-out
 uploads
 data.db
 deps/
+.env

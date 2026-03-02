@@ -24,3 +24,4 @@ pub const middlewares = @import("middlewares/middlewares.zig");
 /// Backwards-compat alias
 pub const middleware = middlewares;
 pub const multipart = utils.multipart;
+pub const Env = utils.Env;

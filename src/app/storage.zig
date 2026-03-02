@@ -12,12 +12,16 @@ pub const Storage = struct {
     gpa: std.mem.Allocator,
     io: Io,
 
-    pub fn init(gpa: std.mem.Allocator, io: Io) Storage {
+    pub fn init(gpa: std.mem.Allocator, io: Io, db_name: []const u8) Storage {
         Dir.cwd().createDirPath(io, "uploads") catch {};
 
-        var db = Database.open("data.db") catch |err| {
+        var name_buf: [256:0]u8 = undefined;
+        const db_path: [*:0]const u8 = std.fmt.bufPrintZ(&name_buf, "{s}", .{db_name}) catch
+            @panic("Database name too long");
+
+        var db = Database.open(db_path) catch |err| {
             std.debug.print("Failed to open database: {s}\n", .{@errorName(err)});
-            @panic("Cannot open data.db");
+            @panic("Cannot open database");
         };
 
         db.exec(

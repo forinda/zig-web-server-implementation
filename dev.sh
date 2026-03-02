@@ -8,13 +8,17 @@
 
 set -euo pipefail
 
-# ---- Configuration ----
+# ---- Configuration (reads the same env vars as the app) ----
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ZIG="${ZIG:-/home/forinda/sdk/zig/zig}"
 WATCH_DIR="${PROJECT_DIR}/src"
 BUILD_CMD="${ZIG} build"
 BINARY="${PROJECT_DIR}/zig-out/bin/server"
 POLL_INTERVAL=1
+
+export PORT="${PORT:-8080}"
+export DB_NAME="${DB_NAME:-data.db}"
+export APP_NAME="${APP_NAME:-Zig Web Server}"
 
 # ---- Colors ----
 RED='\033[0;31m'
@@ -156,12 +160,14 @@ watch_poll() {
 # ---- Main ----
 echo -e "${CYAN}"
 echo "  ========================================="
-echo "    Zig Dev Server - Hot Reload Mode"
+echo "    ${APP_NAME} - Hot Reload Mode"
 echo "  ========================================="
 echo -e "${NC}"
 log_info "Watching: ${WATCH_DIR}"
 log_info "Binary:   ${BINARY}"
 log_info "Zig:      ${ZIG} ($(${ZIG} version 2>/dev/null || echo 'unknown'))"
+log_info "Port:     ${PORT}"
+log_info "Database: ${DB_NAME}"
 echo ""
 
 # Initial build and start

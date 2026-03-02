@@ -70,7 +70,7 @@ pub fn App(comptime AppState: type) type {
         // ---- Server ----
 
         /// Start listening on the given port. Blocks forever, accepting connections.
-        pub fn listen(self: *Self, port: u16) !void {
+        pub fn listen(self: *Self, port: u16, app_name: []const u8) !void {
             const address: net.IpAddress = .{ .ip4 = net.Ip4Address.loopback(port) };
 
             var tcp_server = address.listen(self.io, .{ .reuse_address = true }) catch |err| {
@@ -82,18 +82,14 @@ pub fn App(comptime AppState: type) type {
             std.debug.print(
                 \\
                 \\===========================================
-                \\  Zig Web Server running on port {d}
+                \\  {s} running on port {d}
                 \\  http://127.0.0.1:{d}
                 \\===========================================
                 \\
                 \\
-            , .{ port, port });
+            , .{ app_name, port, port });
 
-            // Print registered routes
-            for (self.router.routes.items) |r| {
-                std.debug.print("  {s: <7} {s}\n", .{ @tagName(r.method), r.pattern });
-            }
-            std.debug.print("\n", .{});
+            std.debug.print("  {d} routes registered\n\n", .{self.router.routes.items.len});
 
             const mw_slice = self.middlewares.items;
 
