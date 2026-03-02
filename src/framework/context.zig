@@ -223,6 +223,7 @@ pub const Context = struct {
         var err_buf: [512]u8 = undefined;
         const error_body = StatusCode.errorBodyMsg(&err_buf, msg);
         try self.request.respond(error_body, .{
+            .keep_alive = false,
             .status = status.code,
             .extra_headers = &.{
                 .{ .name = "content-type", .value = "application/json" },
@@ -237,6 +238,7 @@ pub const Context = struct {
         const disposition = std.fmt.bufPrint(&disp_buf, "attachment; filename=\"{s}\"", .{filename}) catch "attachment";
 
         try self.request.respond(data, .{
+            .keep_alive = false,
             .status = self.response_status.code,
             .extra_headers = &.{
                 .{ .name = "content-type", .value = content_type },
@@ -262,6 +264,7 @@ pub const Context = struct {
             const compressed = gzipCompress(self.allocator, body_data) catch {
                 // Fallback to uncompressed on compression error
                 try self.request.respond(body_data, .{
+                    .keep_alive = false,
                     .status = self.response_status.code,
                     .extra_headers = &.{
                         .{ .name = "content-type", .value = content_type },
@@ -272,6 +275,7 @@ pub const Context = struct {
             };
             defer self.allocator.free(compressed);
             try self.request.respond(compressed, .{
+                .keep_alive = false,
                 .status = self.response_status.code,
                 .extra_headers = &.{
                     .{ .name = "content-type", .value = content_type },
@@ -281,6 +285,7 @@ pub const Context = struct {
             });
         } else {
             try self.request.respond(body_data, .{
+                .keep_alive = false,
                 .status = self.response_status.code,
                 .extra_headers = &.{
                     .{ .name = "content-type", .value = content_type },

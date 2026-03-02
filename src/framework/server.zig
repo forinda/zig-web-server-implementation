@@ -10,7 +10,8 @@ const MiddlewareFn = context_mod.MiddlewareFn;
 const Router = @import("router.zig").Router;
 const StatusCode = @import("utils/status.zig").StatusCode;
 
-/// Handle a single TCP connection — processes HTTP requests in a keep-alive loop.
+/// Handle a single TCP connection — processes one HTTP request then closes.
+/// The server is single-threaded, so keep-alive would block new connections.
 pub fn handleConnection(
     stream: net.Stream,
     io: Io,
@@ -25,28 +26,27 @@ pub fn handleConnection(
     var connection_writer = stream.writer(io, &send_buffer);
     var server: http.Server = .init(&connection_reader.interface, &connection_writer.interface);
 
-    while (true) {
-        var request = server.receiveHead() catch |err| switch (err) {
-            error.HttpConnectionClosing => return,
-            else => {
-                std.debug.print("Error receiving request: {s}\n", .{@errorName(err)});
-                return;
-            },
-        };
+    var request = server.receiveHead() catch |err| switch (err) {
+        error.HttpConnectionClosing => return,
+        else => {
+            std.debug.print("Error receiving request: {s}\n", .{@errorName(err)});
+            return;
+        },
+    };
 
-        handleRequest(&request, gpa, io, router, middlewares, app_ctx) catch |err| {
-            std.debug.print("Handler error: {s}\n", .{@errorName(err)});
-            // Try to send a 500 error
-            var err_buf: [64]u8 = undefined;
-            const err_body = StatusCode.internal_server_error.errorBody(&err_buf);
-            request.respond(err_body, .{
-                .status = .internal_server_error,
-                .extra_headers = &.{
-                    .{ .name = "content-type", .value = "application/json" },
-                },
-            }) catch return;
-        };
-    }
+    handleRequest(&request, gpa, io, router, middlewares, app_ctx) catch |err| {
+        std.debug.print("Handler error: {s}\n", .{@errorName(err)});
+        // Try to send a 500 error
+        var err_buf: [64]u8 = undefined;
+        const err_body = StatusCode.internal_server_error.errorBody(&err_buf);
+        request.respond(err_body, .{
+            .keep_alive = false,
+            .status = .internal_server_error,
+            .extra_headers = &.{
+                .{ .name = "content-type", .value = "application/json" },
+            },
+        }) catch return;
+    };
 }
 
 fn handleRequest(
@@ -69,6 +69,7 @@ fn handleRequest(
         var buf: [64]u8 = undefined;
         const not_found_body = StatusCode.not_found.errorBody(&buf);
         try request.respond(not_found_body, .{
+            .keep_alive = false,
             .status = .not_found,
             .extra_headers = &.{
                 .{ .name = "content-type", .value = "application/json" },

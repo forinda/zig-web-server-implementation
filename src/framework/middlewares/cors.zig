@@ -34,6 +34,7 @@ fn corsHandler(comptime opts: CorsOptions, ctx: *Context) anyerror!void {
         // Preflight — respond immediately with CORS headers
         const credentials_value = if (opts.allow_credentials) "true" else "false";
         try ctx.request.respond("", .{
+            .keep_alive = false,
             .status = .no_content,
             .extra_headers = &.{
                 .{ .name = "access-control-allow-origin", .value = opts.allow_origin },
